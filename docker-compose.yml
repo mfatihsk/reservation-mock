@@ -1,0 +1,88 @@
+version: '3.5'
+
+services:
+
+
+  reservation-process:
+    image : io.mfatih/reservation-process:latest
+    restart: always
+    environment:
+      - spring.datasource.url=jdbc:postgresql://postgres:5432/cinema
+      - spring.liquibase.url=jdbc:postgresql://postgres:5432/cinema
+      - spring.datasource.username=simon
+      - spring.liquibase.user=simon
+      - spring.datasource.password=123456
+      - spring.liquibase.password=123456
+      - spring.kafka.bootstrap-servers=kafka1:9092
+    depends_on:
+      - postgres
+      - kafka1
+
+  reservation-rest:
+    image : io.mfatih/reservation-rest:latest
+    restart: always
+    environment:
+      - spring.kafka.bootstrap-servers=kafka1:9092
+    ports:
+      - "8080:8080"
+    depends_on:
+      - kafka1
+
+
+  postgres:
+    image: postgres:13.1
+    user: root
+    container_name: postgres_2
+    hostname: postgres_2
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: 'cinema'
+      POSTGRES_PASSWORD: '123456'
+      POSTGRES_USER: 'simon'
+
+  zookeeper1:
+    image: zookeeper:3.4.9
+    hostname: zookeeper1
+    container_name: zookeeper1
+    ports:
+    - "2181:2181"
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_PORT: 2181
+      ZOO_SERVERS: server.1=zookeeper1:2888:3888
+    restart: always
+
+  kafka1:
+    image: confluentinc/cp-kafka:5.5.0
+    hostname: kafka1
+    container_name: kafka1
+    links:
+    - zookeeper1
+    ports:
+    - "9092:9092"
+    - "7081:7081"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka1:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
+      KAFKA_BROKER_ID: 1
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      #KAFKA_OPTS: -javaagent:/usr/app/jmx_prometheus_javaagent.jar=7081:/usr/app/prom-jmx-agent-config.yml
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    restart: unless-stopped
+    ports:
+      - "9501:9000"
+    environment:
+      KAFKA_BROKERCONNECT: kafka1:9092
+    depends_on:
+      - kafka1

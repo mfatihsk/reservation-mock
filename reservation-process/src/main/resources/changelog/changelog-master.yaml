@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - include:
+      - file: v_0001_create_tables.sql
+      - relativeToChangelogFile: true
+  - include:
+      - file: v_0002_session_2.sql
+      - relativeToChangelogFile: true
+  - include:
+      - file: v_0003_session_3.sql
+      - relativeToChangelogFile: true
+  - include:
+      - file: v_0004_session_4.sql
+      - relativeToChangelogFile: true
+  - include:
+      - file: v_0005_session_5.sql
+      - relativeToChangelogFile: true
